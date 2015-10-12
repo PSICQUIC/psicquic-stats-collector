@@ -51,4 +51,5 @@ local.properties
 # Hidden files
 .DS_Store
 
+# PSICQUIC bot files
 *.pmids.txt
