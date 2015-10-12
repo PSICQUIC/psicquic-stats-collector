@@ -60,9 +60,8 @@ public class PsicquicService {
 
         PsicquicService that = ( PsicquicService ) o;
 
-        if ( !name.equals( that.name ) ) return false;
+        return name.equals(that.name);
 
-        return true;
     }
 
     @Override
