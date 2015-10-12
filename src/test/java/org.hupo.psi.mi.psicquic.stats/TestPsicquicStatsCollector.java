@@ -26,7 +26,7 @@ public class TestPsicquicStatsCollector {
     public void testData(){
         try {
             List<String> sourcesToQuery = new ArrayList<String>();
-            String sourceTest = "MatrixDB";
+            String sourceTest = "InnateDB";
             sourcesToQuery.add(sourceTest);
 
             PsicquicStatsCollector collector = new PsicquicStatsCollector();
