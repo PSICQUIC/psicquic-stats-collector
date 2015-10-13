@@ -2,11 +2,19 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:context="http://www.springframework.org/schema/context"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
-                           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-2.5.xsd">
-
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+    
     <context:component-scan base-package="org.hupo.psi.mi.psicquic.stats"/>
 
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="ignoreUnresolvablePlaceholders" value="true"/>
+        <property name="locations">
+            <list>
+                <value>classpath:META-INF/google.properties</value>
+            </list>
+        </property>
+    </bean>
     <!-- Spring specific -->
     <bean class="org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor"/>
 
@@ -23,13 +31,20 @@
         </property>
     </bean>
 
-    <bean id="statsConfig" class="org.hupo.psi.mi.psicquic.stats.Config">
+    <bean id="statsConfig" class="org.hupo.psi.mi.psicquic.stats.config.StatsConfig">
         <property name="psicquicRegistryUrl">
             <value><![CDATA[${psicquic.registry.url}]]></value>
         </property>
         <property name="smtpConfigFile" value="${smtp.config.file}"/>
         <property name="interactionMiqlQuery" value="${psicquic.interaction.miql.query}"/>
         <property name="publicationMiqlQuery" value="${psicquic.publication.miql.query}"/>
+    </bean>
+
+    <bean id="googleConfig" class="org.hupo.psi.mi.psicquic.stats.config.GoogleConfig">
+        <property name="spreadsheetKey" value="${google.spreadsheetKey}"/>
+        <property name="p12FilePath" value="${google.p12FilePath}"/>
+        <property name="p12FileName" value="${google.p12FileName}"/>
+        <property name="accountID" value="${google.accountID}"/>
     </bean>
 
 </beans>
