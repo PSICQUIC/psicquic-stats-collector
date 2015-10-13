@@ -1,4 +1,4 @@
-package org.hupo.psi.mi.psicquic.stats;
+package org.hupo.psi.mi.psicquic.stats.config;
 
 /**
  * Basic configuration holder.
@@ -7,7 +7,7 @@ package org.hupo.psi.mi.psicquic.stats;
  * @version $Id$
  * @since 0.1
  */
-public class Config {
+public class StatsConfig {
 
     public static final String DEFAULT_SMTP_CONFIG = "/META-INF/smtp.properties";
 
@@ -18,14 +18,14 @@ public class Config {
     private String interactionMiqlQuery;
     private String publicationMiqlQuery;
 
-    public Config() {
+    public StatsConfig() {
     }
 
     public String getPsicquicRegistryUrl() {
         return psicquicRegistryUrl;
     }
 
-    public void setPsicquicRegistryUrl( String psicquicRegistryUrl ) {
+    public void setPsicquicRegistryUrl(String psicquicRegistryUrl) {
         this.psicquicRegistryUrl = psicquicRegistryUrl;
     }
 
@@ -33,7 +33,7 @@ public class Config {
         return smtpConfigFile;
     }
 
-    public void setSmtpConfigFile( String smtpConfigFile ) {
+    public void setSmtpConfigFile(String smtpConfigFile) {
         this.smtpConfigFile = smtpConfigFile;
     }
 
@@ -60,12 +60,12 @@ public class Config {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append( "Config" );
-        sb.append( "{psicquicRegistryUrl='" ).append( psicquicRegistryUrl ).append( '\'' );
-        sb.append( ", smtpConfigFile='" ).append( smtpConfigFile ).append( '\'' );
-        sb.append( ", interaction miqlQuery='" ).append( interactionMiqlQuery ).append( '\'' );
-        sb.append( ", publication miqlQuery='" ).append( publicationMiqlQuery ).append( '\'' );
-        sb.append( '}' );
+        sb.append("Config");
+        sb.append("{psicquicRegistryUrl='").append(psicquicRegistryUrl).append('\'');
+        sb.append(", smtpConfigFile='").append(smtpConfigFile).append('\'');
+        sb.append(", interaction miqlQuery='").append(interactionMiqlQuery).append('\'');
+        sb.append(", publication miqlQuery='").append(publicationMiqlQuery).append('\'');
+        sb.append('}');
         return sb.toString();
     }
 }
