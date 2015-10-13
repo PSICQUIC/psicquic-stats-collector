@@ -20,6 +20,7 @@ import org.hupo.psi.mi.psicquic.registry.ServiceType;
 import org.hupo.psi.mi.psicquic.registry.client.PsicquicRegistryClientException;
 import org.hupo.psi.mi.psicquic.registry.client.registry.DefaultPsicquicRegistryClient;
 import org.hupo.psi.mi.psicquic.registry.client.registry.PsicquicRegistryClient;
+import org.hupo.psi.mi.psicquic.stats.config.EmailConfig;
 import org.hupo.psi.mi.psicquic.stats.config.GoogleConfig;
 import org.hupo.psi.mi.psicquic.stats.config.StatsConfig;
 import org.hupo.psi.mi.psicquic.wsclient.PsicquicSimpleClient;
@@ -79,9 +80,9 @@ public class PsicquicStatsCollector {
 
     public static final String FILE_SEPARATOR = System.getProperty("file.separator");
     private static final Log log = LogFactory.getLog(PsicquicStatsCollector.class);
-    private static final String PSICQUIC_REGISTRY_URL_KEY = "psicquic.registry.url";
-    private static final String SMTP_CONFIG_FILE_KEY = "smtp.config.file";
-    private static final int PSICQUIC_DEFAULT_TIMEOUT = 60000;
+    //    private static final String PSICQUIC_REGISTRY_URL_KEY = "psicquic.registry";
+//    private static final String SMTP_CONFIG_FILE_KEY = "smtp.config.file";
+//    private static final int PSICQUIC_DEFAULT_TIMEOUT = 60000;
     private static final int PSICQUIC_BATCH_SIZE = 500;
     private static final String TOTAL_COLUMN = "Total";
     private static final String DATE_COLUMN = "Date";
@@ -90,9 +91,7 @@ public class PsicquicStatsCollector {
     private static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
     private static SimpleDateFormat DATE_AS_DIR = new SimpleDateFormat("yyyy/MM/dd");
     private MailSender mailSender;
-    private String senderEmail;
-    private String mailSubjectPrefix;
-    private List<String> recipients;
+    private EmailConfig emailConfig;
     private StatsConfig statsConfig;
     private int numberOfTests = 10;
     private GoogleConfig googleConfig;
@@ -111,36 +110,17 @@ public class PsicquicStatsCollector {
         this.mailSender = (MailSender) factory.getBean("mailSender");
         this.statsConfig = (StatsConfig) factory.getBean("statsConfig");
         this.googleConfig = (GoogleConfig) factory.getBean("googleConfig");
+        this.emailConfig = (EmailConfig) factory.getBean("emailConfig");
+
         log.info("Config post spring initialization:" + statsConfig);
+        log.info("mailSubjectPrefix = " + emailConfig.getMailSubjectPrefix());
+        log.info("recipients = " + emailConfig.getRecipients());
+        log.info("senderEmail = " + emailConfig.getSenderEmail());
 
-        // load email properties
-        File smtpConfig = null;
-        if (!statsConfig.hasSmtpConfigFile()) {
-            log.info("Using default SMTP config from classpath: '" + StatsConfig.DEFAULT_SMTP_CONFIG + "'");
-            smtpConfig = new File(PsicquicStatsCollector.class.getResource(StatsConfig.DEFAULT_SMTP_CONFIG).getFile());
-        } else {
-            smtpConfig = new File(statsConfig.getSmtpConfigFile());
-        }
-        log.info("Using SMTP config from: '" + smtpConfig.getAbsolutePath() + "'");
-
-        Properties properties = new Properties();
-        FileInputStream in = new FileInputStream(smtpConfig);
-        properties.load(in);
-        in.close();
-
-        mailSubjectPrefix = properties.getProperty("email.subject.prefix");
-        log.info("mailSubjectPrefix = " + mailSubjectPrefix);
-        String recipientList = properties.getProperty("email.recipients");
-
-        recipients = new ArrayList(Arrays.asList(recipientList.split(",")));
-        log.info("recipients = " + recipients);
-
-        senderEmail = properties.getProperty("email.sender");
-        log.info("senderEmail = " + senderEmail);
-        if (StringUtils.isEmpty(senderEmail)) {
+        if (StringUtils.isEmpty(emailConfig.getSenderEmail())) {
             // disable email sending facilities
             log.warn("No email sender specified, running with email facilities disabled.");
-            senderEmail = null;
+            emailConfig.setSenderEmail(null);
             mailSender = null;
         }
 
@@ -158,16 +138,16 @@ public class PsicquicStatsCollector {
     public void sendEmail(String title, String body) {
         if (mailSender == null) {
             log.debug("------------------------------------------------------------");
-            log.debug("From:  " + senderEmail);
-            log.debug("To:    " + recipients);
-            log.debug("Title: " + mailSubjectPrefix + title);
+            log.debug("From:  " + emailConfig.getSenderEmail());
+            log.debug("To:    " + emailConfig.getRecipients());
+            log.debug("Title: " + emailConfig.getMailSubjectPrefix() + title);
             log.debug(body);
             log.debug("------------------------------------------------------------");
         } else {
             final SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(recipients.toArray(new String[]{}));
-            message.setFrom(senderEmail);
-            message.setSubject(mailSubjectPrefix + " " + title);
+            message.setTo(emailConfig.getRecipients());
+            message.setFrom(emailConfig.getSenderEmail());
+            message.setSubject(emailConfig.getMailSubjectPrefix() + " " + title);
             message.setText(body);
             mailSender.send(message);
         }
@@ -463,7 +443,7 @@ public class PsicquicStatsCollector {
 
 
         final String registryUrl = statsConfig.getPsicquicRegistryUrl();
-
+        System.out.println(statsConfig.toString());
         if (log.isInfoEnabled()) log.info("Reading PSICQUIC services list from: " + registryUrl);
 
         // collect services via REST to to be able to pass filters on the URL (status, tags...)
@@ -659,10 +639,10 @@ public class PsicquicStatsCollector {
 
             // Save pmid list for later processing.
             String user = null;
-            if (senderEmail != null) {
-                System.out.println("senderEmail='" + senderEmail + "'");
-                if (senderEmail.indexOf("@") != -1) {
-                    user = senderEmail.substring(0, senderEmail.indexOf("@"));
+            if (emailConfig.getSenderEmail() != null) {
+                System.out.println("senderEmail='" + emailConfig.getSenderEmail() + "'");
+                if (emailConfig.getSenderEmail().contains("@")) {
+                    user = emailConfig.getSenderEmail().substring(0, emailConfig.getSenderEmail().indexOf("@"));
                 }
             }
             File parentDir = new File((user == null ? "" : user + FILE_SEPARATOR) + todayDirectory());
