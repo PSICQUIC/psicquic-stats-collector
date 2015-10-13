@@ -1,10 +1,11 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:context="http://www.springframework.org/schema/context"
        xsi:schemaLocation="http://www.springframework.org/schema/beans
-       http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
-    
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+
     <context:component-scan base-package="org.hupo.psi.mi.psicquic.stats"/>
 
     <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
@@ -12,6 +13,8 @@
         <property name="locations">
             <list>
                 <value>classpath:META-INF/google.properties</value>
+                <value>classpath:META-INF/smtp.properties</value>
+                <value>classpath:META-INF/psicquic.properties</value>
             </list>
         </property>
     </bean>
@@ -31,13 +34,16 @@
         </property>
     </bean>
 
+    <bean id="emailConfig" class="org.hupo.psi.mi.psicquic.stats.config.EmailConfig">
+        <property name="mailSubjectPrefix" value="${email.subject.prefix}"/>
+        <property name="recipients" value="${email.recipient}"/>
+        <property name="senderEmail" value="${email.sender.address}"/>
+    </bean>
+
     <bean id="statsConfig" class="org.hupo.psi.mi.psicquic.stats.config.StatsConfig">
-        <property name="psicquicRegistryUrl">
-            <value><![CDATA[${psicquic.registry.url}]]></value>
-        </property>
-        <property name="smtpConfigFile" value="${smtp.config.file}"/>
-        <property name="interactionMiqlQuery" value="${psicquic.interaction.miql.query}"/>
-        <property name="publicationMiqlQuery" value="${psicquic.publication.miql.query}"/>
+        <property name="psicquicRegistryUrl" value="${psicquic.registry}"/>
+        <property name="interactionMiqlQuery" value="${psicquic.interaction.query}"/>
+        <property name="publicationMiqlQuery" value="${psicquic.publication.query}"/>
     </bean>
 
     <bean id="googleConfig" class="org.hupo.psi.mi.psicquic.stats.config.GoogleConfig">
@@ -46,5 +52,4 @@
         <property name="p12FileName" value="${google.p12FileName}"/>
         <property name="accountID" value="${google.accountID}"/>
     </bean>
-
 </beans>
