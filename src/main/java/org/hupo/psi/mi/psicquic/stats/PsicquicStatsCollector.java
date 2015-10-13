@@ -80,9 +80,6 @@ public class PsicquicStatsCollector {
 
     public static final String FILE_SEPARATOR = System.getProperty("file.separator");
     private static final Log log = LogFactory.getLog(PsicquicStatsCollector.class);
-    //    private static final String PSICQUIC_REGISTRY_URL_KEY = "psicquic.registry";
-//    private static final String SMTP_CONFIG_FILE_KEY = "smtp.config.file";
-//    private static final int PSICQUIC_DEFAULT_TIMEOUT = 60000;
     private static final int PSICQUIC_BATCH_SIZE = 500;
     private static final String TOTAL_COLUMN = "Total";
     private static final String DATE_COLUMN = "Date";
@@ -342,7 +339,6 @@ public class PsicquicStatsCollector {
                                 sendEmail("Cell format error in worksheet: " + worksheetName,
                                         "Cell[" + row + "," + col + "]='" + value + "' when an integer was expected");
                                 abortRow = true;
-                                continue; // exit column loop
                             }
                         }
                     } else {
@@ -363,7 +359,6 @@ public class PsicquicStatsCollector {
             if (hasNewData && currentTotalSum != 0) {
                 // given that the last row of this sheet is not available in the WorksheetFacade until we save the updatedCells,
                 // we save the last total additionally
-                log.info("Current total: " + currentTotalSum);
                 final CellEntry cell = myWorksheet.getCell(myWorksheet.getNextEmptyRow(), totalColumnIndex);
                 cell.changeInputValueLocal(String.valueOf(currentTotalSum));
                 updatedCells.add(cell);
@@ -484,10 +479,8 @@ public class PsicquicStatsCollector {
         for (PsicquicService service : psicquicServices) {
             log.info(service.getName() + " -> " + service.getSoapUrl());
             PsicquicSimpleClient client = new PsicquicSimpleClient(service.getRestUrl());
-
             try {
-                boolean error = false;
-
+                boolean error;
                 try {
                     long count = client.countByQuery(statsConfig.getInteractionMiqlQuery());
                     service.setInteractionCount(Long.valueOf(count).intValue());
@@ -497,7 +490,7 @@ public class PsicquicStatsCollector {
                     int number = 1;
                     error = true;
 
-                    while (number < numberOfTests && error == true) {
+                    while (number < numberOfTests && error) {
                         number++;
                         System.out.println("Failed to connect to service, try number " + number);
 
@@ -560,7 +553,6 @@ public class PsicquicStatsCollector {
                 }
             }
 
-
             int current = 0;
 
 
@@ -582,7 +574,7 @@ public class PsicquicStatsCollector {
                         int number = 1;
                         error = true;
 
-                        while (number < numberOfTests && error == true) {
+                        while (number < numberOfTests && error) {
                             number++;
                             System.out.println("Failed to connect to service, try number " + number);
 
