@@ -1,6 +1,5 @@
 package org.hupo.psi.mi.psicquic.stats;
 
-
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -21,6 +20,8 @@ import org.hupo.psi.mi.psicquic.registry.ServiceType;
 import org.hupo.psi.mi.psicquic.registry.client.PsicquicRegistryClientException;
 import org.hupo.psi.mi.psicquic.registry.client.registry.DefaultPsicquicRegistryClient;
 import org.hupo.psi.mi.psicquic.registry.client.registry.PsicquicRegistryClient;
+import org.hupo.psi.mi.psicquic.stats.config.GoogleConfig;
+import org.hupo.psi.mi.psicquic.stats.config.StatsConfig;
 import org.hupo.psi.mi.psicquic.wsclient.PsicquicSimpleClient;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -92,9 +93,9 @@ public class PsicquicStatsCollector {
     private String senderEmail;
     private String mailSubjectPrefix;
     private List<String> recipients;
-    private Config config;
+    private StatsConfig statsConfig;
     private int numberOfTests = 10;
-
+    private GoogleConfig googleConfig;
 
     ///////////////////////////////////////
     // Mail handling
@@ -108,17 +109,17 @@ public class PsicquicStatsCollector {
 
         // inject my spring beans
         this.mailSender = (MailSender) factory.getBean("mailSender");
-        this.config = (Config) factory.getBean("statsConfig");
-
-        log.info("Config post spring initialization:" + config);
+        this.statsConfig = (StatsConfig) factory.getBean("statsConfig");
+        this.googleConfig = (GoogleConfig) factory.getBean("googleConfig");
+        log.info("Config post spring initialization:" + statsConfig);
 
         // load email properties
         File smtpConfig = null;
-        if (!config.hasSmtpConfigFile()) {
-            log.info("Using default SMTP config from classpath: '" + Config.DEFAULT_SMTP_CONFIG + "'");
-            smtpConfig = new File(PsicquicStatsCollector.class.getResource(Config.DEFAULT_SMTP_CONFIG).getFile());
+        if (!statsConfig.hasSmtpConfigFile()) {
+            log.info("Using default SMTP config from classpath: '" + StatsConfig.DEFAULT_SMTP_CONFIG + "'");
+            smtpConfig = new File(PsicquicStatsCollector.class.getResource(StatsConfig.DEFAULT_SMTP_CONFIG).getFile());
         } else {
-            smtpConfig = new File(config.getSmtpConfigFile());
+            smtpConfig = new File(statsConfig.getSmtpConfigFile());
         }
         log.info("Using SMTP config from: '" + smtpConfig.getAbsolutePath() + "'");
 
@@ -143,29 +144,15 @@ public class PsicquicStatsCollector {
             mailSender = null;
         }
 
-        log.info("configuration post initialization: " + config);
+        log.info("configuration post initialization: " + statsConfig);
     }
 
     ///////////////////////////////////////
     // Google Spreadsheet related methods
 
     public static void main(String[] args) throws Exception {
-
-        // TODO Auto resize of the spreadsheet when we reach the maximum size
-        if (args.length < 4) {
-            System.err.println("usage: PsicquicStatsCollector <gmail.account> <password> <spreadsheet.key> " +
-                    "[-D" + PSICQUIC_REGISTRY_URL_KEY + "=pathToFile] " +
-                    "[-D" + SMTP_CONFIG_FILE_KEY + "=pathToFile]");
-            System.exit(1);
-        }
-//        // Handle input parameters
-        final String spreadsheetKey = args[0];
-        final String p12FilePath = args[1];
-        final String p12FileName = args[2];
-        final String accountID = args[3];
-
         PsicquicStatsCollector collector = new PsicquicStatsCollector();
-        collector.updateSpreadsheet(spreadsheetKey, p12FilePath, p12FileName, accountID);
+        collector.updateSpreadsheet();
     }
 
     public void sendEmail(String title, String body) {
@@ -475,7 +462,7 @@ public class PsicquicStatsCollector {
         }
 
 
-        final String registryUrl = config.getPsicquicRegistryUrl();
+        final String registryUrl = statsConfig.getPsicquicRegistryUrl();
 
         if (log.isInfoEnabled()) log.info("Reading PSICQUIC services list from: " + registryUrl);
 
@@ -522,7 +509,7 @@ public class PsicquicStatsCollector {
                 boolean error = false;
 
                 try {
-                    long count = client.countByQuery(config.getInteractionMiqlQuery());
+                    long count = client.countByQuery(statsConfig.getInteractionMiqlQuery());
                     service.setInteractionCount(Long.valueOf(count).intValue());
                     db2interactionCount.put(service.getName(), count);
                 } catch (IOException e) {
@@ -542,7 +529,7 @@ public class PsicquicStatsCollector {
 
                             // try again
 
-                            long count = client.countByQuery(config.getInteractionMiqlQuery());
+                            long count = client.countByQuery(statsConfig.getInteractionMiqlQuery());
                             service.setInteractionCount(Long.valueOf(count).intValue());
                             db2interactionCount.put(service.getName(), count);
 
@@ -602,7 +589,7 @@ public class PsicquicStatsCollector {
             boolean error = false;
 
             PsicquicSimpleClient simpleClient = new PsicquicSimpleClient(service.getRestUrl());
-            final long totalInteractionCount = simpleClient.countByQuery(config.getPublicationMiqlQuery());
+            final long totalInteractionCount = simpleClient.countByQuery(statsConfig.getPublicationMiqlQuery());
 
             try {
                 do {
@@ -690,9 +677,9 @@ public class PsicquicStatsCollector {
     }
 
     private Collection<BinaryInteraction> processCountPublications(int current, Set<String> pmids, PsicquicSimpleClient simpleClient, PsimiTabReader mitabReader) throws IOException, PsimiTabException {
-        InputStream result = simpleClient.getByQuery(config.getPublicationMiqlQuery(), "tab25", current, PSICQUIC_BATCH_SIZE);
+        InputStream result = simpleClient.getByQuery(statsConfig.getPublicationMiqlQuery(), "tab25", current, PSICQUIC_BATCH_SIZE);
 
-        System.out.println(config.getPublicationMiqlQuery() + " / " + "tab25" + " / " + current + " / " + PSICQUIC_BATCH_SIZE);
+        System.out.println(statsConfig.getPublicationMiqlQuery() + " / " + "tab25" + " / " + current + " / " + PSICQUIC_BATCH_SIZE);
 
         Collection<BinaryInteraction> binaryInteractions = mitabReader.read(result);
         boolean hasPubmed = false;
@@ -746,18 +733,18 @@ public class PsicquicStatsCollector {
     }
 
     //todo:separate spreedsheet update from data to be able to test data
-    private void updateSpreadsheet(String spreadsheetKey, String p12FilePath, String p12FileName, String accountID) throws Exception {
-        updateSpreadsheet(spreadsheetKey, p12FilePath, p12FileName, accountID, null, null, null);
+    private void updateSpreadsheet() throws Exception {
+        updateSpreadsheet(googleConfig, null, null, null);
     }
 
-    private void updateSpreadsheet(String spreadsheetKey, String p12FilePath, String p12FileName, String accountID, List<PsicquicService> psicquicServices,
+    private void updateSpreadsheet(GoogleConfig googleConfig, List<PsicquicService> psicquicServices,
                                    Map<String, Long> db2interactionCount, Map<String, Long> db2publicationsCount) throws Exception {
 
         SpreadsheetService service = new SpreadsheetService("PsicquicStatsCollector");
 
         // Authenticate using OAUTH 2 (OAUTH 1 retired)
-        InputStream p12InpputStream = new FileInputStream(p12FilePath);
-        final File tempP12 = File.createTempFile(p12FileName, "p12");
+        InputStream p12InpputStream = new FileInputStream(googleConfig.getP12FilePath());
+        final File tempP12 = File.createTempFile(googleConfig.getP12FileName(), "p12");
         tempP12.deleteOnExit();
         FileOutputStream p12OutputStream = new FileOutputStream(tempP12);
         com.google.api.client.util.IOUtils.copy(p12InpputStream, p12OutputStream);
@@ -769,13 +756,13 @@ public class PsicquicStatsCollector {
         GoogleCredential credential = new GoogleCredential.Builder()
                 .setTransport(httpTransport)
                 .setJsonFactory(jsonFactory)
-                .setServiceAccountId(accountID)
+                .setServiceAccountId(googleConfig.getAccountID())
                 .setServiceAccountScopes(SCOPES)
                 .setServiceAccountPrivateKeyFromP12File(tempP12)
                 .build();
         service.setOAuth2Credentials(credential);
 
-        final SpreadsheetEntry spreadsheetEntry = SpreadsheetFacade.getSpreadsheetWithKey(service, spreadsheetKey);
+        final SpreadsheetEntry spreadsheetEntry = SpreadsheetFacade.getSpreadsheetWithKey(service, googleConfig.getSpreadsheetKey());
         if (psicquicServices == null) {
             psicquicServices = collectPsicquicServiceNames();
         }
