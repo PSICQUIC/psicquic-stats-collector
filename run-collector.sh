@@ -1,2 +1,3 @@
 #!/usr/bin/env bash
-mvn exec:java -Dexec.mainClass=org.hupo.psi.mi.psicquic.stats.PsicquicStatsCollector -Ppsicquic-stats
+mvn compile -Ppsicquic-stats
+mvn exec:java -Dexec.mainClass=org.hupo.psi.mi.psicquic.stats.PsicquicStatsCollector
