@@ -561,63 +561,109 @@ public class PsicquicStatsCollector {
             boolean error = false;
 
             PsicquicSimpleClient simpleClient = new PsicquicSimpleClient(service.getRestUrl());
-            final long totalInteractionCount = simpleClient.countByQuery(statsConfig.getPublicationMiqlQuery());
+            //  final long totalInteractionCount = simpleClient.countByQuery(statsConfig.getPublicationMiqlQuery());
 
+            // new code
+            long totalInteractionCount = 0;
+            boolean pubError = false;
             try {
-                do {
-                    PsimiTabReader mitabReader = new PsimiTabReader();
-                    try {
-                        Collection<BinaryInteraction> binaryInteractions = processCountPublications(current, pmids, simpleClient, mitabReader);
-                        current += binaryInteractions.size();
-                    } catch (IOException e) {
 
-                        int number = 1;
-                        error = true;
+                try {
+                    totalInteractionCount = simpleClient.countByQuery(statsConfig.getPublicationMiqlQuery());
+                } catch (IOException e) {
 
-                        while (number < numberOfTests && error) {
-                            number++;
-                            System.out.println("Failed to connect to service, try number " + number);
+                    int number = 1;
+                    pubError = true;
 
-                            try {
-                                // wait for 10 secondes and try again
-                                Thread thisThread = Thread.currentThread();
+                    while (number < numberOfTests && pubError) {
+                        number++;
+                        log.info("Failed to connect to service for interaction count, try number " + number);
 
-                                Thread.sleep(10000);
+                        try {
+                            // wait for 10 secondes and try again
+                            Thread thisThread = Thread.currentThread();
 
-                                // try again
+                            Thread.sleep(10000);
 
-                                Collection<BinaryInteraction> binaryInteractions = processCountPublications(current, pmids, simpleClient, mitabReader);
-                                current += binaryInteractions.size();
+                            // try again
 
-                                error = false;
-                            } catch (IOException e2) {
-                                log.error("An error occured while retrieving interactions from " + service.getName() + ", test number " + number, e);
-                                error = true;
+                            totalInteractionCount = simpleClient.countByQuery(statsConfig.getPublicationMiqlQuery());
+                            pubError = false;
+                        } catch (IOException e2) {
+                            log.error("An error occured while retrieving interactions-count from " + service.getName() + ", test number " + number, e);
+                            pubError = true;
 
-                                if (number == numberOfTests) {
-                                    log.error("An error occured while retrieving interactions from " + service.getName(), e);
-                                    // email error
-                                    sendEmail("An error occured while collecting PMIDs from: " + service.getName(),
-                                            ExceptionUtils.getFullStackTrace(e));
-                                    break;
-                                }
+                            if (number == numberOfTests) {
+                                log.error("Interaction Count could not be determined - An error occured while querying PSICQUIC service: " + service.getName(), e2);
+                                sendEmail("Failed to query " + service.getName(), ExceptionUtils.getFullStackTrace(e2));
+                                break;
                             }
                         }
                     }
-
-                    // show progress
-                    if ((current % 1000) == 0) {
-                        log.info(current);
-                    }
-                } while (current < totalInteractionCount);
+                }
             } catch (Throwable t) {
-                log.error("An error occured while collecting PMIDs from " + service.getName(), t);
-                error = true;
-
-                // email error
-                sendEmail("An error occured while collecting PMIDs from: " + service.getName(),
-                        ExceptionUtils.getFullStackTrace(t));
+                log.error("An error occured while querying PSICQUIC service: " + service.getName(), t);
+                sendEmail("Failed to query " + service.getName(), ExceptionUtils.getFullStackTrace(t));
             }
+
+
+            // new code end
+            if (!pubError){
+                try {
+                    do {
+                        PsimiTabReader mitabReader = new PsimiTabReader();
+                        try {
+                            Collection<BinaryInteraction> binaryInteractions = processCountPublications(current, pmids, simpleClient, mitabReader);
+                            current += binaryInteractions.size();
+                        } catch (IOException e) {
+
+                            int number = 1;
+                            error = true;
+
+                            while (number < numberOfTests && error) {
+                                number++;
+                                System.out.println("Failed to connect to service, try number " + number);
+
+                                try {
+                                    // wait for 10 secondes and try again
+                                    Thread thisThread = Thread.currentThread();
+
+                                    Thread.sleep(10000);
+
+                                    // try again
+
+                                    Collection<BinaryInteraction> binaryInteractions = processCountPublications(current, pmids, simpleClient, mitabReader);
+                                    current += binaryInteractions.size();
+
+                                    error = false;
+                                } catch (IOException e2) {
+                                    log.error("An error occured while retrieving interactions from " + service.getName() + ", test number " + number, e);
+                                    error = true;
+
+                                    if (number == numberOfTests) {
+                                        log.error("An error occured while retrieving interactions from " + service.getName(), e);
+                                        // email error
+                                        sendEmail("An error occured while collecting PMIDs from: " + service.getName(),
+                                                ExceptionUtils.getFullStackTrace(e));
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        // show progress
+                        if ((current % 1000) == 0) {
+                            log.info(current);
+                        }
+                    } while (current < totalInteractionCount);
+                } catch (Throwable t) {
+                    log.error("An error occured while collecting PMIDs from " + service.getName(), t);
+                    error = true;
+
+                    // email error
+                    sendEmail("An error occured while collecting PMIDs from: " + service.getName(),
+                            ExceptionUtils.getFullStackTrace(t));
+                }
 
             if (log.isInfoEnabled())
                 log.info("\n" + service.getName() + " -> " + pmids.size() + " publication(s)." +
@@ -642,7 +688,9 @@ public class PsicquicStatsCollector {
                 parentDir.mkdirs();
             }
             writeListToDisk(pmids, new File(parentDir, service.getName() + ".pmids.txt"));
-
+        }else{
+                log.error("PMID collection not executed because interaction Count could not be determined for Service::"+service.getName());
+            }
         } // psicquic services
 
         return db2publicationsCount;
@@ -721,6 +769,43 @@ public class PsicquicStatsCollector {
         FileOutputStream p12OutputStream = new FileOutputStream(tempP12);
         com.google.api.client.util.IOUtils.copy(p12InpputStream, p12OutputStream);
 
+
+
+        if (psicquicServices == null) {
+            psicquicServices = collectPsicquicServiceNames();
+        }
+
+        // Update interaction counts
+        if (db2interactionCount == null) {
+            db2interactionCount = updatePsicquicInteractionsStats(psicquicServices); //data
+        }
+        SpreadsheetEntry spreadsheetEntryInteraction=createSpreadSheetEntry(service,tempP12);
+        List<String> updatedServices = updateInteractionWorksheet(service, spreadsheetEntryInteraction, db2interactionCount); //spreadsheet
+        if (log.isInfoEnabled()) log.info(updatedServices.size() + " services updated: " + updatedServices);
+
+        // Update publication for those services that have a different count of interactions
+        if (!updatedServices.isEmpty()) {
+            if (db2publicationsCount == null) {
+                db2publicationsCount = collectPsicquicPublicationsStats(psicquicServices, updatedServices); //data
+            }
+            SpreadsheetEntry spreadsheetEntryPublication=createSpreadSheetEntry(service,tempP12);
+            if(db2publicationsCount!=null&&db2publicationsCount.size()>0) {
+                updatedServices.addAll(updatePublicationWorksheet(service, spreadsheetEntryPublication, db2publicationsCount)); //spreadsheet
+            }else{
+                log.error("Publication Work Sheet could not be updated as no publication were found, see previous logs for details");
+            }
+        } else {
+            log.info("No services with interaction count update, skipping publication update.");
+        }
+
+        if (!updatedServices.isEmpty()) {
+            sendEmail("Spreadsheet was updated", "Some services had new data online: " + showServices(psicquicServices));
+        } else {
+            sendEmail("Spreadsheet was NOT updated", "No PSICQUIC services had new data.");
+        }
+    }
+
+    private SpreadsheetEntry createSpreadSheetEntry(SpreadsheetService service,File tempP12 ) throws Exception{
         HttpTransport httpTransport = new NetHttpTransport();
         JacksonFactory jsonFactory = new JacksonFactory();
         String[] SCOPESArray = {"https://spreadsheets.google.com/feeds", SPREADSHEET_SERVICE_URL, "https://docs.google.com/feeds"};
@@ -734,32 +819,7 @@ public class PsicquicStatsCollector {
                 .build();
         service.setOAuth2Credentials(credential);
 
-        final SpreadsheetEntry spreadsheetEntry = SpreadsheetFacade.getSpreadsheetWithKey(service, googleConfig.getSpreadsheetKey());
-        if (psicquicServices == null) {
-            psicquicServices = collectPsicquicServiceNames();
-        }
-
-        // Update interaction counts
-        if (db2interactionCount == null) {
-            db2interactionCount = updatePsicquicInteractionsStats(psicquicServices); //data
-        }
-        List<String> updatedServices = updateInteractionWorksheet(service, spreadsheetEntry, db2interactionCount); //spreadsheet
-        if (log.isInfoEnabled()) log.info(updatedServices.size() + " services updated: " + updatedServices);
-
-        // Update publication for those services that have a different count of interactions
-        if (!updatedServices.isEmpty()) {
-            if (db2publicationsCount == null) {
-                db2publicationsCount = collectPsicquicPublicationsStats(psicquicServices, updatedServices); //data
-            }
-            updatedServices.addAll(updatePublicationWorksheet(service, spreadsheetEntry, db2publicationsCount)); //spreadsheet
-        } else {
-            log.info("No services with interaction count update, skipping publication update.");
-        }
-
-        if (!updatedServices.isEmpty()) {
-            sendEmail("Spreadsheet was updated", "Some services had new data online: " + showServices(psicquicServices));
-        } else {
-            sendEmail("Spreadsheet was NOT updated", "No PSICQUIC services had new data.");
-        }
+        SpreadsheetEntry spreadsheetEntry = SpreadsheetFacade.getSpreadsheetWithKey(service, googleConfig.getSpreadsheetKey());
+        return spreadsheetEntry;
     }
 }
