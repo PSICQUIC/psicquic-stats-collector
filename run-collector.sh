@@ -7,7 +7,7 @@
 #SBATCH -p production   # partition(s)
 #SBATCH --mem=16G   # memory per node
 #SBATCH -J "PSICQUIC_STATS"   # job name
-#SBATCH -o "/nfs/production/hhe/intact/data/psicquic-stats-logs/run-collector-%j.out"   # job output file
+#SBATCH -o "/nfs/production/hhe/intact/data/psicquic-stats/logs/run-collector-%j.out"   # job output file
 #SBATCH --mail-user=intact-dev@ebi.ac.uk   # email address
 #SBATCH --mail-type=ALL
 
