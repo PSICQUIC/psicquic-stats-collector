@@ -20,7 +20,7 @@
         <spring.version>4.3.30.RELEASE</spring.version>
         <micluster.version>1.9.0-SNAPSHOT</micluster.version>
         <psicquic.simple.client.version>1.5.3-SNAPSHOT</psicquic.simple.client.version>
-        <psicquic.registry.client.version>1.5.0</psicquic.registry.client.version>
+        <psicquic.registry.client.version>1.5.1</psicquic.registry.client.version>
     </properties>
 
     <build>
@@ -156,10 +156,6 @@
         <repository>
             <id>nexus</id>
             <url>https://www.ebi.ac.uk/intact/maven/nexus/content/groups/public/</url>
-        </repository>
-        <repository>
-            <id>nexus-ebi-repo-old</id>
-            <url>https://www.ebi.ac.uk/intact/maven/nexus/content/repositories/ebi-repo/</url>
         </repository>
         <repository>
             <id>nexus-ebi-release-repo</id>
